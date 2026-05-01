@@ -2,7 +2,7 @@
 
 #### Changes
 
-* FFI: Add `client_side_cache` configuration to the URI-based client creation API (`create_client_from_uri`) — supports `max_cache_kb`, `entry_ttl_ms`, `eviction_policy` (LRU/LFU), and `enable_metrics` via JSON options; `cache_id` is auto-generated internally ([]())
+* FFI: Add `client_side_cache` configuration to the URI-based client creation API (`create_client_from_uri`) — supports `max_cache_kb`, `entry_ttl_ms`, `eviction_policy` (LRU/LFU), and `enable_metrics` via JSON options; `cache_id` is auto-generated internally ([#5860](https://github.com/valkey-io/valkey-glide/pull/5860))
 
 ## Pending 2.4
 
