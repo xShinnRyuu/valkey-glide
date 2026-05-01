@@ -1,3 +1,9 @@
+## Unreleased
+
+#### Changes
+
+* FFI: Add `client_side_cache` configuration to the URI-based client creation API (`create_client_from_uri`) — supports `max_cache_kb`, `entry_ttl_ms`, `eviction_policy` (LRU/LFU), and `enable_metrics` via JSON options; `cache_id` is auto-generated internally ([]())
+
 ## Pending 2.4
 
 #### Changes
