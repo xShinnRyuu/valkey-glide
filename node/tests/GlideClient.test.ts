@@ -1976,6 +1976,19 @@ describe("GlideClient", () => {
         timeout: TIMEOUT,
     });
 
+    it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
+        "reset_%p",
+        async (protocol) => {
+            client = await GlideClient.createClient(
+                getClientConfigurationOption(cluster.getAddresses(), protocol),
+            );
+            expect(await client.reset()).toEqual("RESET");
+            // Verify client recovers after reset
+            expect(await client.ping()).toEqual("PONG");
+        },
+        TIMEOUT,
+    );
+
     it(
         "tcp nodelay configuration",
         async () => {

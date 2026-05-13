@@ -3235,6 +3235,24 @@ describe("GlideClusterClient", () => {
         TIMEOUT,
     );
 
+    it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
+        "reset_%p",
+        async (protocol) => {
+            const client = await GlideClusterClient.createClient(
+                getClientConfigurationOption(cluster.getAddresses(), protocol),
+            );
+
+            try {
+                expect(await client.reset()).toEqual("RESET");
+                // Verify client recovers after reset
+                expect(await client.ping()).toEqual("PONG");
+            } finally {
+                client.close();
+            }
+        },
+        TIMEOUT,
+    );
+
     it(
         "tcp nodelay configuration",
         async () => {
