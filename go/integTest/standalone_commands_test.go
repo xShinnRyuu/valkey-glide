@@ -881,6 +881,19 @@ func (suite *GlideTestSuite) TestClientGetSetName() {
 	assert.Equal(t, result.Value(), "ConnectionName")
 }
 
+func (suite *GlideTestSuite) TestReset() {
+	client := suite.defaultClient()
+	t := suite.T()
+
+	result, err := client.Reset(context.Background())
+	assert.Nil(t, err)
+	assert.Equal(t, "RESET", result)
+	// Verify client recovers after reset
+	pong, err := client.Ping(context.Background())
+	assert.Nil(t, err)
+	assert.Equal(t, "PONG", pong)
+}
+
 func (suite *GlideTestSuite) TestMove() {
 	client := suite.defaultClient()
 	t := suite.T()
