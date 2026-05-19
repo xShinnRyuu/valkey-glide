@@ -117,6 +117,26 @@ updates:
           - "Rust ⚙️"
           - "python 🐍"
 
+    # Enable version updates for Cargo (Rust - Node wrapper)
+    - package-ecosystem: "cargo"
+      directory: "/node/rust-client"
+      schedule:
+          interval: "weekly"
+          day: "monday"
+          time: "09:00"
+      open-pull-requests-limit: 10
+      groups:
+          patch-updates:
+              update-types:
+                  - "patch"
+          minor-updates:
+              update-types:
+                  - "minor"
+      labels:
+          - "dependencies"
+          - "Rust ⚙️"
+          - "node 🐢"
+
     # Enable version updates for Go modules
     - package-ecosystem: "gomod"
       directory: "/go"
