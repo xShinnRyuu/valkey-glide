@@ -137,8 +137,16 @@ updates:
           - "go 🏃"
 
     # Enable version updates for pip (Python)
+    # Use `directories:` (plural) so Dependabot scans both the dev requirements
+    # at /python and the per-package pyproject.toml + requirements.txt under
+    # glide-async/ and glide-sync/. pyproject.toml is the authoritative source
+    # for runtime constraints; without this, bumps only land in requirements.txt
+    # and never reach end users.
     - package-ecosystem: "pip"
-      directory: "/python"
+      directories:
+          - "/python"
+          - "/python/glide-async"
+          - "/python/glide-sync"
       schedule:
           interval: "weekly"
           day: "monday"
