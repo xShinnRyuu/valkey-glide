@@ -25,6 +25,8 @@ describe("NodeDiscoveryMode", () => {
     beforeAll(async () => {
         const standaloneAddresses: string =
             global.STAND_ALONE_ENDPOINT as string;
+        // Setup: creates a cluster with 1 primary + 1 replica.
+        // Assumption: getAddresses() returns the primary at index 0.
         cluster = standaloneAddresses
             ? await ValkeyCluster.initFromExistingCluster(
                   false,
@@ -66,6 +68,7 @@ describe("NodeDiscoveryMode", () => {
             // When using Static mode, the client skips INFO REPLICATION and
             // cannot determine primary vs replica. Only pass the first address
             // (primary) to avoid connecting to a replica and getting ReadOnly.
+            // Assumes: getAddresses()[0] is always the primary node address.
             const addresses = cluster.getAddresses();
             const primaryAddress = [addresses[0]];
 
