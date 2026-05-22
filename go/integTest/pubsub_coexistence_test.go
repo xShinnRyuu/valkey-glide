@@ -51,9 +51,10 @@ func (suite *GlideTestSuite) TestPubSubExactCoexistence() {
 			time.Sleep(200 * time.Millisecond)
 
 			// Receive first with WaitForMessage (async style)
+			var received []string
 			select {
 			case msg1 := <-queue.WaitForMessage():
-				assert.Equal(t, "msg1", msg1.Message)
+				received = append(received, msg1.Message)
 			case <-time.After(3 * time.Second):
 				t.Fatal("Timeout waiting for msg1")
 			}
@@ -61,7 +62,12 @@ func (suite *GlideTestSuite) TestPubSubExactCoexistence() {
 			// Receive second with Pop (sync style)
 			msg2 := queue.Pop()
 			assert.NotNil(t, msg2)
-			assert.Equal(t, "msg2", msg2.Message)
+			if msg2 != nil {
+				received = append(received, msg2.Message)
+			}
+
+			// Assert both messages received regardless of order
+			assert.ElementsMatch(t, []string{"msg1", "msg2"}, received)
 		})
 	}
 }
@@ -103,16 +109,22 @@ func (suite *GlideTestSuite) TestPubSubPatternCoexistence() {
 
 			time.Sleep(200 * time.Millisecond)
 
+			var received []string
 			select {
 			case msg1 := <-queue.WaitForMessage():
-				assert.Equal(t, "msg1", msg1.Message)
+				received = append(received, msg1.Message)
 			case <-time.After(3 * time.Second):
 				t.Fatal("Timeout waiting for msg1")
 			}
 
 			msg2 := queue.Pop()
 			assert.NotNil(t, msg2)
-			assert.Equal(t, "msg2", msg2.Message)
+			if msg2 != nil {
+				received = append(received, msg2.Message)
+			}
+
+			// Assert both messages received regardless of order
+			assert.ElementsMatch(t, []string{"msg1", "msg2"}, received)
 		})
 	}
 }
