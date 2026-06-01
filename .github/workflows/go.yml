@@ -266,6 +266,9 @@ jobs:
                     yum install -y git tar
                     git config --global --add safe.directory "$GITHUB_WORKSPACE"
                     echo IMAGE=amazonlinux:latest | sed -r 's/:/-/g' >> $GITHUB_ENV
+                    # Fix HOME mismatch: GitHub Actions sets HOME=/github/home in containers
+                    # but the running user (root) has home at /root, causing rustup to fail.
+                    echo "HOME=/root" >> $GITHUB_ENV
                   elif [[ "${{ matrix.host.TARGET }}" == *"musl"* ]]; then
                     apk update
                     apk add git bash tar
