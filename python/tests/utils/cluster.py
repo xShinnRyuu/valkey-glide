@@ -2,6 +2,7 @@
 
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import List, Optional
 
@@ -13,6 +14,8 @@ SCRIPT_FILE = (
 
 
 class ValkeyCluster:
+    MAX_CREATION_RETRIES = 3
+
     def __init__(
         self,
         tls,
@@ -22,10 +25,11 @@ class ValkeyCluster:
         load_module: Optional[List[str]] = None,
         addresses: Optional[List[List[str]]] = None,
     ) -> None:
+        self.cluster_folder = ""
+        self.tls = tls
         if addresses:
             self.init_from_existing_cluster(addresses)
         else:
-            self.tls = tls
             args_list = [sys.executable, str(SCRIPT_FILE)]
             if tls:
                 args_list.append("--tls")
@@ -41,18 +45,26 @@ class ValkeyCluster:
                     args_list.extend(["--load-module", module])
             args_list.append(f"-n {shard_count}")
             args_list.append(f"-r {replica_count}")
-            p = subprocess.Popen(
-                args_list,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-            )
-            output, err = p.communicate(timeout=80)
-            if p.returncode != 0:
-                raise Exception(
-                    f"Failed to create a cluster. Executed: {p}" + ":" + f"\n{err}"
+            last_err = None
+            for attempt in range(self.MAX_CREATION_RETRIES):
+                p = subprocess.Popen(
+                    args_list,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
                 )
-            self.parse_cluster_script_start_output(output)
+                output, err = p.communicate(timeout=80)
+                if p.returncode == 0:
+                    self.parse_cluster_script_start_output(output)
+                    return
+                last_err = err
+                if "CLUSTER MEET" in err and attempt < self.MAX_CREATION_RETRIES - 1:
+                    time.sleep(1)
+                    continue
+                break
+            raise Exception(
+                f"Failed to create a cluster. Executed: {p}" + ":" + f"\n{last_err}"
+            )
 
     def parse_cluster_script_start_output(self, output: str):
         assert "CLUSTER_FOLDER" in output and "CLUSTER_NODES" in output
@@ -80,21 +92,22 @@ class ValkeyCluster:
             self.nodes_addr.append(NodeAddress(host, int(port)))
 
     def __del__(self):
-        if self.cluster_folder:
-            args_list = [sys.executable, SCRIPT_FILE]
-            if self.tls:
-                args_list.append("--tls")
-            args_list.extend(["stop", "--cluster-folder", self.cluster_folder])
-            p = subprocess.Popen(
-                args_list,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
+        if not getattr(self, "cluster_folder", ""):
+            return
+        args_list = [sys.executable, SCRIPT_FILE]
+        if self.tls:
+            args_list.append("--tls")
+        args_list.extend(["stop", "--cluster-folder", self.cluster_folder])
+        p = subprocess.Popen(
+            args_list,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        output, err = p.communicate(timeout=20)
+        if p.returncode != 0:
+            raise Exception(
+                f"Failed to stop a cluster {self.cluster_folder}. Executed: {p}"
+                + ":"
+                + f"\n{err}"
             )
-            output, err = p.communicate(timeout=20)
-            if p.returncode != 0:
-                raise Exception(
-                    f"Failed to stop a cluster {self.cluster_folder}. Executed: {p}"
-                    + ":"
-                    + f"\n{err}"
-                )
