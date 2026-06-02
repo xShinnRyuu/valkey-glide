@@ -8568,8 +8568,12 @@ public class SharedCommandTests {
 
         try (BaseClient testClient =
                 client instanceof GlideClient
-                        ? GlideClient.createClient(commonClientConfig().build()).get()
-                        : GlideClusterClient.createClient(commonClusterClientConfig().build()).get()) {
+                        ? GlideClient.createClient(
+                                        commonClientConfig().requestTimeout(5000).build())
+                                .get()
+                        : GlideClusterClient.createClient(
+                                        commonClusterClientConfig().requestTimeout(5000).build())
+                                .get()) {
 
             // ensure that commands doesn't time out even if timeout > request timeout
             long oneSecondInMS = 1000L;
@@ -8631,8 +8635,12 @@ public class SharedCommandTests {
 
         try (BaseClient testClient =
                 client instanceof GlideClient
-                        ? GlideClient.createClient(commonClientConfig().build()).get()
-                        : GlideClusterClient.createClient(commonClusterClientConfig().build()).get()) {
+                        ? GlideClient.createClient(
+                                        commonClientConfig().requestTimeout(5000).build())
+                                .get()
+                        : GlideClusterClient.createClient(
+                                        commonClusterClientConfig().requestTimeout(5000).build())
+                                .get()) {
 
             // ensure that commands doesn't time out even if timeout > request timeout
             long oneSecondInMS = 1000L;

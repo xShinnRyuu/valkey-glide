@@ -1034,7 +1034,9 @@ public class CommandTests {
     @SneakyThrows
     public static Stream<Arguments> callCrossSlotCommandsWhichShouldFail() {
         GlideClusterClient clusterClient =
-                GlideClusterClient.createClient(commonClusterClientConfig().build()).get();
+                GlideClusterClient.createClient(
+                                commonClusterClientConfig().requestTimeout(7000).build())
+                        .get();
         return Stream.of(
                 Arguments.of("smove", null, clusterClient.smove("abc", "zxy", "lkn")),
                 Arguments.of("rename", null, clusterClient.rename("abc", "xyz")),
@@ -1243,7 +1245,9 @@ public class CommandTests {
     @SneakyThrows
     public static Stream<Arguments> callCrossSlotCommandsWhichShouldPass() {
         GlideClusterClient clusterClient =
-                GlideClusterClient.createClient(commonClusterClientConfig().build()).get();
+                GlideClusterClient.createClient(
+                                commonClusterClientConfig().requestTimeout(7000).build())
+                        .get();
         return Stream.of(
                 Arguments.of("exists", clusterClient.exists(new String[] {"abc", "zxy", "lkn"})),
                 Arguments.of("unlink", clusterClient.unlink(new String[] {"abc", "zxy", "lkn"})),
@@ -3941,7 +3945,9 @@ public class CommandTests {
     @Test
     public void keys_cluster_mode_all_nodes() {
         GlideClusterClient client =
-                GlideClusterClient.createClient(commonClusterClientConfig().build()).get();
+                GlideClusterClient.createClient(
+                                commonClusterClientConfig().requestTimeout(7000).build())
+                        .get();
 
         try {
             // Create keys on different hash slots to ensure they're on different nodes
@@ -3978,7 +3984,9 @@ public class CommandTests {
     @Test
     public void keys_cluster_mode_binary() {
         GlideClusterClient client =
-                GlideClusterClient.createClient(commonClusterClientConfig().build()).get();
+                GlideClusterClient.createClient(
+                                commonClusterClientConfig().requestTimeout(7000).build())
+                        .get();
 
         try {
             // Create keys on different hash slots
@@ -4010,7 +4018,9 @@ public class CommandTests {
                 SERVER_VERSION.isGreaterThanOrEqualTo("7.2.0"), "WAITAOF requires Valkey 7.2.0 or higher");
 
         GlideClusterClient client =
-                GlideClusterClient.createClient(commonClusterClientConfig().build()).get();
+                GlideClusterClient.createClient(
+                                commonClusterClientConfig().requestTimeout(7000).build())
+                        .get();
 
         try {
             String key = "{key}:" + UUID.randomUUID();
@@ -4040,7 +4050,9 @@ public class CommandTests {
         // Note: This test verifies the command works in cluster mode
         // Full MIGRATE testing requires a second cluster which is complex to set up
         GlideClusterClient client =
-                GlideClusterClient.createClient(commonClusterClientConfig().build()).get();
+                GlideClusterClient.createClient(
+                                commonClusterClientConfig().requestTimeout(7000).build())
+                        .get();
 
         try {
             String key = "{key}:" + UUID.randomUUID();
