@@ -1331,7 +1331,9 @@ func (suite *GlideTestSuite) TestScriptExists() {
 }
 
 func (suite *GlideTestSuite) TestScriptKill() {
-	invokeClient, err := suite.client(suite.defaultClientConfig())
+	// Use a longer request timeout so InvokeScript blocks until killed
+	invokeConfig := suite.defaultClientConfig().WithRequestTimeout(15 * time.Second)
+	invokeClient, err := suite.client(invokeConfig)
 	require.NoError(suite.T(), err)
 	killClient := suite.defaultClient()
 
@@ -1340,14 +1342,14 @@ func (suite *GlideTestSuite) TestScriptKill() {
 	assert.Error(suite.T(), err)
 	assert.True(suite.T(), strings.Contains(strings.ToLower(err.Error()), "notbusy"))
 
-	// Kill Running Code
-	code := CreateLongRunningLuaScript(5, true)
+	// Kill Running Code - use 10s script to give plenty of headroom for slow CI environments
+	code := CreateLongRunningLuaScript(10, true)
 	script := options.NewScript(code)
 
 	go invokeClient.InvokeScript(context.Background(), *script)
 
-	timeout := time.After(4 * time.Second)
-	ticker := time.NewTicker(100 * time.Millisecond)
+	timeout := time.After(8 * time.Second)
+	ticker := time.NewTicker(500 * time.Millisecond)
 	defer ticker.Stop()
 
 	var result string
@@ -1356,28 +1358,42 @@ func (suite *GlideTestSuite) TestScriptKill() {
 	for !killed {
 		select {
 		case <-timeout:
-			suite.T().Fatal("Timeout: SCRIPT KILL failed to execute in 4 seconds")
+			suite.T().Fatal("Timeout: SCRIPT KILL failed to execute in 8 seconds")
 		case <-ticker.C:
 			result, err = killClient.ScriptKill(context.Background())
 			if err == nil {
 				killed = true
-				// No 'break' needed here; select already exits after one case
-				continue // Or simply let it fall through
+				continue
 			}
 
 			if !strings.Contains(strings.ToLower(err.Error()), "notbusy") {
-				assert.NoError(suite.T(), err) // Will fail the test if there's an unexpected error
-				killed = true                  // Stop polling on unexpected errors
+				assert.NoError(suite.T(), err)
+				killed = true
 			}
-			// If it was "notbusy", loop continues naturally
 		}
 	}
 
-	assert.NoError(suite.T(), err) // This now checks the final error state after the loop
+	assert.NoError(suite.T(), err)
 	assert.Equal(suite.T(), "OK", result)
 	script.Close()
 
-	time.Sleep(1 * time.Second)
+	// Poll until script execution fully terminates on the server
+	timeout2 := time.After(5 * time.Second)
+	ticker2 := time.NewTicker(500 * time.Millisecond)
+	defer ticker2.Stop()
+
+	scriptDone := false
+	for !scriptDone {
+		select {
+		case <-timeout2:
+			suite.T().Fatal("Timeout waiting for script to finish after kill")
+		case <-ticker2.C:
+			_, err = killClient.ScriptKill(context.Background())
+			if err != nil && strings.Contains(strings.ToLower(err.Error()), "notbusy") {
+				scriptDone = true
+			}
+		}
+	}
 
 	// Ensure no script is running at the end
 	_, err = killClient.ScriptKill(context.Background())
