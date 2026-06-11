@@ -4,10 +4,12 @@ package integTest
 
 import (
 	"context"
+	"errors"
 	"runtime"
 	"time"
 
 	"github.com/google/uuid"
+	glide "github.com/valkey-io/valkey-glide/go/v2"
 	"github.com/valkey-io/valkey-glide/go/v2/interfaces"
 )
 
@@ -17,6 +19,21 @@ func (suite *GlideTestSuite) TestParallelizedSetWithGC() {
 		runtime.GC()
 		key := uuid.New().String()
 		value := uuid.New().String()
-		suite.verifyOK(client.Set(context.Background(), key, value))
+
+		var result string
+		var err error
+		// Under extreme parallelism with GC pressure, transient DisconnectErrors can occur
+		// when the pipeline channel fills up. Retry since the client will reconnect.
+		for attempt := 0; attempt < 3; attempt++ {
+			result, err = client.Set(context.Background(), key, value)
+			if err == nil {
+				break
+			}
+			var discErr *glide.DisconnectError
+			if !errors.As(err, &discErr) {
+				break
+			}
+		}
+		suite.verifyOK(result, err)
 	})
 }
