@@ -4,6 +4,7 @@
 
 ### Fixes
 
+* Java: Fix PubSubTests flakiness on engines 8.0/8.1 by separating subscription propagation delays from message delivery wait timeouts, increasing request timeouts for batch publish operations, and adding subscription confirmation for binary pubsub in cluster mode ([#5701](https://github.com/valkey-io/valkey-glide/issues/5701), [#5702](https://github.com/valkey-io/valkey-glide/issues/5702), [#6479](https://github.com/valkey-io/valkey-glide/issues/6479))
 * Core: Update `anyhow` to 1.0.103 to fix RUSTSEC-2026-0190, an unsoundness advisory in `anyhow::Error::downcast_mut()` that can trigger undefined behavior ([#6364](https://github.com/valkey-io/valkey-glide/pull/6364))
 
 ### Changes

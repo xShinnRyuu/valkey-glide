@@ -81,8 +81,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 @Timeout(60) // sec
 public class PubSubTests {
 
-    private static final int REQUEST_TIMEOUT = isWindows() ? 15000 : 5000;
-    private static final int SUBSCRIBE_TIMEOUT = isWindows() ? 15000 : 5000;
+    private static final int REQUEST_TIMEOUT = isWindows() ? 15000 : 10000;
+    private static final int SUBSCRIBE_TIMEOUT = isWindows() ? 15000 : 10000;
 
     /** Enumeration for specifying how subscriptions are established. */
     private enum SubscriptionMethod {
@@ -306,7 +306,14 @@ public class PubSubTests {
     /** Other clients used in a test. */
     private final List<BaseClient> senders = new ArrayList<>();
 
-    private static final int MESSAGE_DELIVERY_DELAY = 500; // ms
+    private static final int MESSAGE_DELIVERY_DELAY = 1000; // ms
+
+    /**
+     * Timeout for waiting for published messages to be received. This is longer than
+     * MESSAGE_DELIVERY_DELAY because receiving many messages (especially in cluster mode on engines
+     * 8.0/8.1) can take significantly longer than subscription propagation.
+     */
+    private static final int MESSAGE_WAIT_TIMEOUT = 10000; // ms
 
     private void waitForCondition(Callable<Boolean> condition, long timeoutMs, String message)
             throws Exception {
@@ -417,13 +424,13 @@ public class PubSubTests {
         if (method == MessageReadMethod.Callback) {
             waitForCondition(
                     () -> pubsubMessageQueue.size() >= expectedCount,
-                    MESSAGE_DELIVERY_DELAY,
+                    MESSAGE_WAIT_TIMEOUT,
                     "Timed out waiting for " + expectedCount + " callback messages");
         } else {
             // For Async/Sync modes, poll until all expected messages are buffered
             waitForCondition(
                     () -> listener.getPubSubMessageCount() >= expectedCount,
-                    MESSAGE_DELIVERY_DELAY,
+                    MESSAGE_WAIT_TIMEOUT,
                     "Timed out waiting for " + expectedCount + " messages to be delivered");
         }
         verifyReceivedPubsubMessages(pubsubMessages, listener, method);
@@ -874,7 +881,7 @@ public class PubSubTests {
         if (method == MessageReadMethod.Callback) {
             waitForCondition(
                     () -> pubsubMessageQueue.size() >= messages.size(),
-                    MESSAGE_DELIVERY_DELAY,
+                    MESSAGE_WAIT_TIMEOUT,
                     "Timed out waiting for callback messages");
             verifyReceivedPubsubMessages(
                     messages.stream()
@@ -887,11 +894,11 @@ public class PubSubTests {
             long patternExpected = messages.stream().filter(m -> m.getPattern().isPresent()).count();
             waitForCondition(
                     () -> listenerExactSub.getPubSubMessageCount() >= exactExpected,
-                    MESSAGE_DELIVERY_DELAY,
+                    MESSAGE_WAIT_TIMEOUT,
                     "Timed out waiting for exact messages");
             waitForCondition(
                     () -> listenerPatternSub.getPubSubMessageCount() >= patternExpected,
-                    MESSAGE_DELIVERY_DELAY,
+                    MESSAGE_WAIT_TIMEOUT,
                     "Timed out waiting for pattern messages");
             verifyReceivedPubsubMessages(
                     messages.stream()
@@ -1034,7 +1041,7 @@ public class PubSubTests {
 
         waitForCondition(
                 () -> listener.getPubSubMessageCount() >= messages.size(),
-                MESSAGE_DELIVERY_DELAY,
+                MESSAGE_WAIT_TIMEOUT,
                 "Timed out waiting for " + messages.size() + " messages to be delivered");
 
         LinkedHashSet<PubSubMessage> received = new LinkedHashSet<PubSubMessage>(messages.size());
@@ -1148,7 +1155,7 @@ public class PubSubTests {
             int totalExpected = exactMessages.size() + patternMessages.size() + shardedMessages.size();
             waitForCondition(
                     () -> pubsubMessageQueue.size() >= totalExpected,
-                    MESSAGE_DELIVERY_DELAY,
+                    MESSAGE_WAIT_TIMEOUT,
                     "Timed out waiting for callback messages");
             Set<Pair<Integer, PubSubMessage>> expected = new HashSet<Pair<Integer, PubSubMessage>>();
             expected.addAll(
@@ -1168,15 +1175,15 @@ public class PubSubTests {
         } else {
             waitForCondition(
                     () -> listenerExact.getPubSubMessageCount() >= exactMessages.size(),
-                    MESSAGE_DELIVERY_DELAY,
+                    MESSAGE_WAIT_TIMEOUT,
                     "Timed out waiting for exact messages");
             waitForCondition(
                     () -> listenerPattern.getPubSubMessageCount() >= patternMessages.size(),
-                    MESSAGE_DELIVERY_DELAY,
+                    MESSAGE_WAIT_TIMEOUT,
                     "Timed out waiting for pattern messages");
             waitForCondition(
                     () -> listenerSharded.getPubSubMessageCount() >= shardedMessages.size(),
-                    MESSAGE_DELIVERY_DELAY,
+                    MESSAGE_WAIT_TIMEOUT,
                     "Timed out waiting for sharded messages");
             verifyReceivedPubsubMessages(
                     exactMessages.stream()
@@ -1264,7 +1271,7 @@ public class PubSubTests {
         if (method == MessageReadMethod.Callback) {
             waitForCondition(
                     () -> pubsubMessageQueue.size() >= 5,
-                    MESSAGE_DELIVERY_DELAY,
+                    MESSAGE_WAIT_TIMEOUT,
                     "Timed out waiting for callback messages");
             Set<Pair<Integer, PubSubMessage>> expected =
                     new HashSet<Pair<Integer, PubSubMessage>>(
@@ -1283,15 +1290,15 @@ public class PubSubTests {
         } else {
             waitForCondition(
                     () -> listenerExact.getPubSubMessageCount() >= 2,
-                    MESSAGE_DELIVERY_DELAY,
+                    MESSAGE_WAIT_TIMEOUT,
                     "Timed out waiting for exact messages");
             waitForCondition(
                     () -> listenerPattern.getPubSubMessageCount() >= 2,
-                    MESSAGE_DELIVERY_DELAY,
+                    MESSAGE_WAIT_TIMEOUT,
                     "Timed out waiting for pattern messages");
             waitForCondition(
                     () -> listenerSharded.getPubSubMessageCount() >= 1,
-                    MESSAGE_DELIVERY_DELAY,
+                    MESSAGE_WAIT_TIMEOUT,
                     "Timed out waiting for sharded messages");
             verifyReceivedPubsubMessages(
                     new HashSet<Pair<Integer, PubSubMessage>>(
@@ -1433,7 +1440,7 @@ public class PubSubTests {
         // Allow the message to propagate.
         waitForCondition(
                 () -> listener.getPubSubMessageCount() >= 2,
-                MESSAGE_DELIVERY_DELAY,
+                MESSAGE_WAIT_TIMEOUT,
                 "Timed out waiting for messages to be delivered");
 
         PubSubMessage asyncMessage = listener.getPubSubMessage().get();
@@ -1475,7 +1482,7 @@ public class PubSubTests {
         // Allow the message to propagate.
         waitForCondition(
                 () -> listener.getPubSubMessageCount() >= 2,
-                MESSAGE_DELIVERY_DELAY,
+                MESSAGE_WAIT_TIMEOUT,
                 "Timed out waiting for messages to be delivered");
 
         PubSubMessage asyncMessage = listener.getPubSubMessage().get();
@@ -1534,7 +1541,7 @@ public class PubSubTests {
         // Allow the message to propagate.
         waitForCondition(
                 () -> callbackMessages.size() >= 1,
-                MESSAGE_DELIVERY_DELAY,
+                MESSAGE_WAIT_TIMEOUT,
                 "Timed out waiting for callback message");
 
         assertEquals(1, callbackMessages.size());
@@ -1578,7 +1585,7 @@ public class PubSubTests {
         // Allow the message to propagate.
         waitForCondition(
                 () -> callbackMessages.size() >= 1,
-                MESSAGE_DELIVERY_DELAY,
+                MESSAGE_WAIT_TIMEOUT,
                 "Timed out waiting for callback message");
 
         assertEquals(1, callbackMessages.size());
@@ -1629,7 +1636,7 @@ public class PubSubTests {
         // Allow the message to propagate.
         waitForCondition(
                 () -> callbackMessages.size() >= 3,
-                MESSAGE_DELIVERY_DELAY,
+                MESSAGE_WAIT_TIMEOUT,
                 "Timed out waiting for callback messages");
 
         assertEquals(3, callbackMessages.size());
@@ -1677,11 +1684,20 @@ public class PubSubTests {
                         standalone, subscriptions, Optional.of(callback), Optional.of(callbackMessages));
         BaseClient sender = createClient(standalone);
 
+        // Allow subscription propagation, especially in cluster mode on engines 8.0/8.1
+        Thread.sleep(MESSAGE_DELIVERY_DELAY);
+
         assertEquals(OK, sender.publish(message.getMessage(), channel).get());
         waitForCondition(
                 () -> callbackMessages.size() >= 1,
-                MESSAGE_DELIVERY_DELAY,
-                "Timed out waiting for binary message");
+                MESSAGE_WAIT_TIMEOUT,
+                "Timed out waiting for binary message on callback listener");
+
+        // Wait for the message to arrive on the sync listener as well
+        waitForCondition(
+                () -> listener.getPubSubMessageCount() >= 1,
+                MESSAGE_WAIT_TIMEOUT,
+                "Timed out waiting for binary message on sync listener");
 
         assertEquals(message, listener.tryGetPubSubMessage());
         assertEquals(1, callbackMessages.size());
@@ -2486,7 +2502,7 @@ public class PubSubTests {
                         long ts = Long.parseLong(stats.get("subscription_last_sync_timestamp"));
                         return ts > initialTimestamp;
                     },
-                    MESSAGE_DELIVERY_DELAY,
+                    MESSAGE_WAIT_TIMEOUT,
                     "Timed out waiting for subscription timestamp to update");
 
             // Get updated timestamp
@@ -2536,7 +2552,7 @@ public class PubSubTests {
                         Set<String> ch = s.getActualSubscriptions().get(PubSubChannelMode.EXACT);
                         return ch != null && ch.size() >= 2;
                     },
-                    MESSAGE_DELIVERY_DELAY,
+                    MESSAGE_WAIT_TIMEOUT,
                     "Timed out waiting for subscriptions");
 
             // Unsubscribe from all (lazy)
@@ -2547,7 +2563,7 @@ public class PubSubTests {
                         Set<String> ch = s.getActualSubscriptions().get(PubSubChannelMode.EXACT);
                         return ch == null || ch.isEmpty();
                     },
-                    MESSAGE_DELIVERY_DELAY,
+                    MESSAGE_WAIT_TIMEOUT,
                     "Timed out waiting for unsubscribe");
 
             // Verify we can subscribe again (proves unsubscribe worked)
@@ -2558,7 +2574,7 @@ public class PubSubTests {
                         Set<String> ch = s.getActualSubscriptions().get(PubSubChannelMode.EXACT);
                         return ch != null && ch.size() >= 2;
                     },
-                    MESSAGE_DELIVERY_DELAY,
+                    MESSAGE_WAIT_TIMEOUT,
                     "Timed out waiting for re-subscriptions");
 
             // Unsubscribe from all (blocking)
@@ -2569,7 +2585,7 @@ public class PubSubTests {
                         Set<String> ch = s.getActualSubscriptions().get(PubSubChannelMode.EXACT);
                         return ch == null || ch.isEmpty();
                     },
-                    MESSAGE_DELIVERY_DELAY,
+                    MESSAGE_WAIT_TIMEOUT,
                     "Timed out waiting for blocking unsubscribe");
 
             // Verify we can subscribe again (proves unsubscribe worked)
@@ -2580,7 +2596,7 @@ public class PubSubTests {
                         Set<String> ch = s.getActualSubscriptions().get(PubSubChannelMode.EXACT);
                         return ch != null && ch.size() >= 1;
                     },
-                    MESSAGE_DELIVERY_DELAY,
+                    MESSAGE_WAIT_TIMEOUT,
                     "Timed out waiting for final subscription");
         } finally {
             client.close();
@@ -2605,7 +2621,7 @@ public class PubSubTests {
                         Set<String> ch = s.getActualSubscriptions().get(PubSubClusterChannelMode.EXACT);
                         return ch != null && ch.size() >= 2;
                     },
-                    MESSAGE_DELIVERY_DELAY,
+                    MESSAGE_WAIT_TIMEOUT,
                     "Timed out waiting for cluster subscriptions");
 
             // Verify subscriptions
@@ -2622,7 +2638,7 @@ public class PubSubTests {
                         Set<String> ch = s.getActualSubscriptions().get(PubSubClusterChannelMode.EXACT);
                         return ch == null || ch.isEmpty();
                     },
-                    MESSAGE_DELIVERY_DELAY,
+                    MESSAGE_WAIT_TIMEOUT,
                     "Timed out waiting for cluster unsubscribe");
 
             // Verify all unsubscribed
@@ -2638,7 +2654,7 @@ public class PubSubTests {
                         Set<String> ch = s.getActualSubscriptions().get(PubSubClusterChannelMode.EXACT);
                         return ch != null && ch.size() >= 2;
                     },
-                    MESSAGE_DELIVERY_DELAY,
+                    MESSAGE_WAIT_TIMEOUT,
                     "Timed out waiting for cluster re-subscriptions");
 
             // Unsubscribe from all (blocking)
@@ -2649,7 +2665,7 @@ public class PubSubTests {
                         Set<String> ch = s.getActualSubscriptions().get(PubSubClusterChannelMode.EXACT);
                         return ch == null || ch.isEmpty();
                     },
-                    MESSAGE_DELIVERY_DELAY,
+                    MESSAGE_WAIT_TIMEOUT,
                     "Timed out waiting for cluster blocking unsubscribe");
 
             // Verify all unsubscribed
@@ -2679,7 +2695,7 @@ public class PubSubTests {
                         Set<String> p = s.getActualSubscriptions().get(PubSubChannelMode.PATTERN);
                         return p != null && p.size() >= 2;
                     },
-                    MESSAGE_DELIVERY_DELAY,
+                    MESSAGE_WAIT_TIMEOUT,
                     "Timed out waiting for pattern subscriptions");
 
             // Verify subscriptions
@@ -2712,7 +2728,7 @@ public class PubSubTests {
                         Set<String> p = s.getActualSubscriptions().get(PubSubChannelMode.PATTERN);
                         return p != null && p.size() >= 2;
                     },
-                    MESSAGE_DELIVERY_DELAY,
+                    MESSAGE_WAIT_TIMEOUT,
                     "Timed out waiting for pattern re-subscriptions");
 
             // Unsubscribe from all patterns (blocking)
@@ -2756,7 +2772,7 @@ public class PubSubTests {
                         Set<String> ch = s.getActualSubscriptions().get(PubSubClusterChannelMode.SHARDED);
                         return ch != null && ch.size() >= 2;
                     },
-                    MESSAGE_DELIVERY_DELAY,
+                    MESSAGE_WAIT_TIMEOUT,
                     "Timed out waiting for sharded subscriptions");
 
             // Verify subscriptions
@@ -2773,7 +2789,7 @@ public class PubSubTests {
                         Set<String> ch = s.getActualSubscriptions().get(PubSubClusterChannelMode.SHARDED);
                         return ch == null || ch.isEmpty();
                     },
-                    MESSAGE_DELIVERY_DELAY,
+                    MESSAGE_WAIT_TIMEOUT,
                     "Timed out waiting for sharded unsubscribe");
 
             // Verify all unsubscribed
@@ -2790,7 +2806,7 @@ public class PubSubTests {
                         Set<String> ch = s.getActualSubscriptions().get(PubSubClusterChannelMode.SHARDED);
                         return ch != null && ch.size() >= 2;
                     },
-                    MESSAGE_DELIVERY_DELAY,
+                    MESSAGE_WAIT_TIMEOUT,
                     "Timed out waiting for sharded re-subscriptions");
 
             // Unsubscribe from all sharded channels (blocking)
@@ -2801,7 +2817,7 @@ public class PubSubTests {
                         Set<String> ch = s.getActualSubscriptions().get(PubSubClusterChannelMode.SHARDED);
                         return ch == null || ch.isEmpty();
                     },
-                    MESSAGE_DELIVERY_DELAY,
+                    MESSAGE_WAIT_TIMEOUT,
                     "Timed out waiting for sharded blocking unsubscribe");
 
             // Verify all unsubscribed
@@ -2927,7 +2943,7 @@ public class PubSubTests {
                     Set<String> ch = s.getActualSubscriptions().get(PubSubClusterChannelMode.SHARDED);
                     return ch != null && ch.size() >= 2;
                 },
-                MESSAGE_DELIVERY_DELAY,
+                MESSAGE_WAIT_TIMEOUT,
                 "Timed out waiting for sharded subs in different slots");
 
         // Unsubscribe from one channel
@@ -2938,7 +2954,7 @@ public class PubSubTests {
                     Set<String> ch = s.getActualSubscriptions().get(PubSubClusterChannelMode.SHARDED);
                     return ch != null && !ch.contains(channel1);
                 },
-                MESSAGE_DELIVERY_DELAY,
+                MESSAGE_WAIT_TIMEOUT,
                 "Timed out waiting for partial sharded unsubscribe");
 
         // Verify only channel2 remains
@@ -2970,7 +2986,7 @@ public class PubSubTests {
                     Set<String> ch = s.getActualSubscriptions().get(PubSubChannelMode.EXACT);
                     return ch != null && !ch.isEmpty();
                 },
-                MESSAGE_DELIVERY_DELAY,
+                MESSAGE_WAIT_TIMEOUT,
                 "Timed out waiting for exact subscription");
         client.psubscribeLazy(createSet(pattern)).get();
         waitForCondition(
@@ -2979,7 +2995,7 @@ public class PubSubTests {
                     Set<String> p = s.getActualSubscriptions().get(PubSubChannelMode.PATTERN);
                     return p != null && !p.isEmpty();
                 },
-                MESSAGE_DELIVERY_DELAY,
+                MESSAGE_WAIT_TIMEOUT,
                 "Timed out waiting for pattern subscription");
 
         // Verify both subscriptions
@@ -2995,7 +3011,7 @@ public class PubSubTests {
                     Set<String> ch = s.getActualSubscriptions().get(PubSubChannelMode.EXACT);
                     return ch == null || ch.isEmpty();
                 },
-                MESSAGE_DELIVERY_DELAY,
+                MESSAGE_WAIT_TIMEOUT,
                 "Timed out waiting for exact unsubscribe");
 
         // Verify exact unsubscribed but pattern remains
@@ -3014,7 +3030,7 @@ public class PubSubTests {
                     Set<String> p = s.getActualSubscriptions().get(PubSubChannelMode.PATTERN);
                     return p == null || p.isEmpty();
                 },
-                MESSAGE_DELIVERY_DELAY,
+                MESSAGE_WAIT_TIMEOUT,
                 "Timed out waiting for pattern unsubscribe");
 
         // Verify all unsubscribed
