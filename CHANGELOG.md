@@ -4,6 +4,9 @@
 
 ### Fixes
 
+* CI: Fix Rust benchmark linker Bus error (signal 7) on ephemeral CI runners by switching from fat LTO to thin LTO and removing debug symbols in the release profile.
+  Fat LTO requires the linker to hold all codegen units in memory simultaneously, which exceeds available resources when linking native dependencies (jemalloc, lz4, zstd, aws-lc).
+  Thin LTO provides equivalent benchmark accuracy with significantly lower peak memory and disk usage during linking. ([#6521](https://github.com/valkey-io/valkey-glide/issues/6521))
 * Core: Enforce the RESP3 parser recursion-depth limit for all aggregate types (map, set, push, attribute), not just arrays. A malicious or compromised server could previously send deeply nested `%`/`~`/`>`/`|` payloads that consumed one native stack frame per level and crashed the host application via stack exhaustion (DoS); such payloads now surface a graceful parse error. ([#6477](https://github.com/valkey-io/valkey-glide/pull/6477))
 * Core: Update `anyhow` to 1.0.103 to fix RUSTSEC-2026-0190, an unsoundness advisory in `anyhow::Error::downcast_mut()` that can trigger undefined behavior ([#6364](https://github.com/valkey-io/valkey-glide/pull/6364))
 * Go: Remove `.gitignore` from the released module so consumers who commit `vendor/` keep the generated artifacts (`internal/protobuf/*.pb.go`, `rustbin/**`, `lib.h`) ([#6441](https://github.com/valkey-io/valkey-glide/pull/6441))

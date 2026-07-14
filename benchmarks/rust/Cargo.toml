@@ -22,5 +22,5 @@ average = "0.17"
 tikv-jemallocator = "0.7.0"
 
 [profile.release]
-debug = true
-lto = true
+lto = "thin"
+codegen-units = 1
