@@ -737,6 +737,15 @@ def wait_for_all_topology_views(
     Wait for each of the nodes to have a topology view that contains all nodes.
     Only when a replica finished syncing and loading, it will be included in the CLUSTER SLOTS output.
     """
+    # Scale retries based on cluster size: larger clusters need more time to converge.
+    # Base: 80 retries (80s) for up to 6 nodes, add 10 retries per additional node.
+    base_retries = 80
+    extra_retries = max(0, len(servers) - 6) * 10
+    max_retries = base_retries + extra_retries
+    logging.info(
+        f"Waiting for topology convergence across {len(servers)} nodes "
+        f"(max retries per node: {max_retries})"
+    )
     for server in servers:
         cmd_args = [
             get_cli_command(),
@@ -749,7 +758,7 @@ def wait_for_all_topology_views(
             "slots",
         ]
         logging.debug(f"Executing: {cmd_args}")
-        retries = 80
+        retries = max_retries
         while retries >= 0:
             output = redis_cli_run_command(cmd_args)
             if output is not None and output.count(f"{server.host}") == len(servers):

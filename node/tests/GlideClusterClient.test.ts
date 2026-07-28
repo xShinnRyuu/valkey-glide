@@ -123,7 +123,7 @@ describe("GlideClusterClient", () => {
                 getServerVersion,
             );
         }
-    }, 120000);
+    }, 240000);
 
     afterEach(async () => {
         await flushClient(client);
